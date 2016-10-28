@@ -2,3 +2,12 @@
 task-description
 *.log
 .idea
+dist
+build
+
+# Mac OS Finder's files
+.DS_Store
+
+# setup.py is generated automatically by `py2applet --make-setup TkReversi.py`
+setup.py
+
