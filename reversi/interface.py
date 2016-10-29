@@ -306,7 +306,7 @@ class UserVsUserController:
             on_cant_move=self._on_cant_move,
             on_game_over=self._on_game_over,
             on_cell_change=self._on_cell_change,
-            on_normal_turn=self._on_normal_turn,
+            on_normal_move=self._on_normal_move,
         )
         self._react_on_click = False
 
@@ -318,7 +318,7 @@ class UserVsUserController:
                     row_id, col_id, cell,
                     callback=self._on_animation_end
                 )
-        self.app.set_status("{} player's turn"
+        self.app.set_status("{} player's move"
                             .format(self.game.current_player.name))
         self.app.update_game_scores()
 
@@ -328,9 +328,9 @@ class UserVsUserController:
         if self.game.is_game_over:
             self.app.go_to_main_menu()
             return
-        if (row_id, col_id) not in self.game.get_possible_turns():
+        if (row_id, col_id) not in self.game.get_possible_moves():
             return
-        self.game.make_turn(row_id, col_id)
+        self.game.make_move(row_id, col_id)
 
     def _on_animation_end(self):
         self._react_on_click = True
@@ -350,9 +350,9 @@ class UserVsUserController:
             .format(player.name, player.opposite.name)
         )
 
-    def _on_normal_turn(self, next_player):
+    def _on_normal_move(self, next_player):
         self.app.update_game_scores()
-        self.app.set_status("{} player's turn"
+        self.app.set_status("{} player's move"
                             .format(next_player.name))
 
     def _on_game_over(self):

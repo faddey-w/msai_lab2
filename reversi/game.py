@@ -16,7 +16,7 @@ class Player(str, enum.Enum):
 
 class GameEvent(str, enum.Enum):
     PlayerCannotMove = 'on_cant_move'
-    NormalTurn = 'on_normal_turn'
+    NormalMove = 'on_normal_move'
     GameOver = 'on_game_over'
     CellOwnerChange = 'on_cell_change'
 
@@ -43,8 +43,8 @@ class Reversi(object):
         assert all(len(row) == self.FIELD_SIZE for row in field)
 
         self._field = field
-        self._possible_turns = None
-        self._calculate_possible_turns()
+        self._possible_moves = None
+        self._calculate_possible_moves()
 
     @classmethod
     def New(cls, **callbacks):
@@ -77,7 +77,7 @@ class Reversi(object):
 
     @property
     def is_game_over(self):
-        return not self._possible_turns
+        return not self._possible_moves
 
     @property
     def current_player(self):
@@ -129,7 +129,7 @@ class Reversi(object):
         self._send_event(GameEvent.CellOwnerChange,
                          row_id, col_id, player, prev_player)
 
-    def _calculate_possible_turns(self, player=None):
+    def _calculate_possible_moves(self, player=None):
         def _pos_add(pos1, delta, coeff=1):
             return pos1[0] + coeff*delta[0], pos1[1] + coeff*delta[1]
         increments = set(product([-1, 0, 1], [-1, 0, 1])) - {(0, 0)}
@@ -163,24 +163,24 @@ class Reversi(object):
             if total_cells_to_revert:
                 result[pos] = total_cells_to_revert
 
-        self._possible_turns = result
+        self._possible_moves = result
         return result
 
-    def get_possible_turns(self):
-        return set(self._possible_turns.keys())
+    def get_possible_moves(self):
+        return set(self._possible_moves.keys())
 
-    def make_turn(self, row_id, col_id):
-        turn_position = row_id, col_id
-        if turn_position not in self._possible_turns:
-            raise InvalidTurn
-        self._set(turn_position, self._player)
-        for position in self._possible_turns[turn_position]:
+    def make_move(self, row_id, col_id):
+        move_position = row_id, col_id
+        if move_position not in self._possible_moves:
+            raise InvalidMove
+        self._set(move_position, self._player)
+        for position in self._possible_moves[move_position]:
             self._set(position, self._player)
 
-        if self._calculate_possible_turns(self._player.opposite):
+        if self._calculate_possible_moves(self._player.opposite):
             self._player = self._player.opposite
-            self._send_event(GameEvent.NormalTurn, self._player)
-        elif self._calculate_possible_turns(self._player):
+            self._send_event(GameEvent.NormalMove, self._player)
+        elif self._calculate_possible_moves(self._player):
             self._send_event(GameEvent.PlayerCannotMove,
                              self._player.opposite)
         else:
@@ -213,7 +213,7 @@ class Reversi(object):
             self.callbacks[event](*args, **kwargs)
 
 
-class InvalidTurn(Exception):
+class InvalidMove(Exception):
     pass
 
 
