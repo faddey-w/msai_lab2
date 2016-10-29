@@ -18,6 +18,10 @@ class ReversiApp:
 
         self._setup_window(tk_root)
         self._tk_root = tk_root
+        self._run_animation = Animator(
+            check_closed=lambda: getattr(self, '_was_closed'),
+            delay_apply=tk_root.after
+        )
 
         def on_close():
             self._was_closed = True
@@ -207,23 +211,76 @@ class ReversiApp:
     def start_game(self):
         self._setup_controller(UserVsUserController)
 
-    def _run_animation(self, step_function, start, stop, time_period, callback):
-        start_run_ts = time.time() * 1000
 
-        def _do_animate():
-            if self._was_closed:
-                return
+class Animator:
+
+    FRAMES_PER_SECOND = 15
+
+    def __init__(self, check_closed, delay_apply):
+        self._is_closed = check_closed
+        self._delay_apply = delay_apply
+        self._entries = []
+        self._worker_id = None
+        # it seems that Tk.after() accepts only raw functions, not methods
+        self._worker_caller = lambda: self._worker()
+
+    def __call__(self, function, start_val, stop_val, duration, callback=None):
+        if self._worker_id is None:
+            self._schedule_worker()
+        self._entries.append(self._Entry(
+            function, start_val, stop_val,
+            duration, callback
+        ))
+
+    def _worker(self):
+        # check if we should stop
+        if self._is_closed() or not self._entries:
+            self._worker_id = None
+            return
+        # here we provide the safe way to add new animations
+        # from within callbacks or step functions
+        remove_indices = set()
+        entry_dict = dict(enumerate(self._entries))
+        self._entries.clear()
+
+        # perform all animation steps within single event of event-loop
+        # that's why this class was created:
+        # all animations will be rendered to the display at once
+        # instead of touching the slow display after each step
+        for idx, entry in entry_dict.items():
             ts = time.time() * 1000
-            ratio = (ts - start_run_ts) / time_period
+            ratio = (ts - entry.start_ts) / entry.duration
+            start, stop = entry.start_val, entry.stop_val
             if ratio <= 1:
-                step_function(start + ratio*(stop-start))
-                self._tk_root.after(50, _do_animate)
+                entry.function(start + ratio * (stop-start))
             else:
-                step_function(stop)
-                if callback:
-                    callback()
+                entry.function(stop)
+                remove_indices.add(idx)
+                if entry.callback:
+                    entry.callback()
+        # remove finished animations
+        for idx in remove_indices:
+            entry_dict.pop(idx)
+        # put pending animations into the list again
+        # note that self._entries may be not empty at that point
+        self._entries.extend(entry_dict.values())
 
-        self._tk_root.after(0, _do_animate)
+        #
+        self._schedule_worker()
+
+    class _Entry:
+        def __init__(self, function, start_val, stop_val, duration, callback):
+            self.function = function
+            self.start_val = start_val
+            self.stop_val = stop_val
+            self.duration = duration
+            self.callback = callback
+            self.start_ts = time.time() * 1000
+
+    def _schedule_worker(self):
+        period = 1000 // self.FRAMES_PER_SECOND
+        w_id = self._delay_apply(period, self._worker_caller)
+        self._worker_id = w_id
 
 
 class MainMenuController:
@@ -267,6 +324,9 @@ class UserVsUserController:
 
     def on_field_click(self, row_id, col_id):
         if not self._react_on_click:
+            return
+        if self.game.is_game_over:
+            self.app.go_to_main_menu()
             return
         if (row_id, col_id) not in self.game.get_possible_turns():
             return

@@ -61,6 +61,20 @@ class Reversi(object):
     def Load(cls, game_dump, **callbacks):
         return cls(game_dump['player'], game_dump['field'], **callbacks)
 
+    @classmethod
+    def LoadFromText(cls, text_repr, **callbacks):
+        lines = list(filter(bool,
+                     map(str.strip, text_repr.splitlines())))
+        player = Player(lines.pop(0))
+        field = []
+        for line in lines:
+            row = [
+                Player(item) if item != '*' else None
+                for item in line.split()
+            ]
+            field.append(row)
+        return cls(player, field, **callbacks)
+
     @property
     def is_game_over(self):
         return not self._possible_turns
@@ -85,6 +99,11 @@ class Reversi(object):
 
     def __getitem__(self, pos):
         row_id, col_id = pos
+        if row_id < 0 or col_id < 0:
+            # prevent indexing from end
+            # because it gives ability to specify cell in two ways.
+            # our semantics: indices should be strictly within [0..8]
+            raise IndexError
         return self._field[row_id][col_id]
 
     def _get(self, position):
@@ -196,3 +215,8 @@ class Reversi(object):
 
 class InvalidTurn(Exception):
     pass
+
+
+def load_from_text_file(filename, **callbacks):
+    with open(filename) as f:
+        return Reversi.LoadFromText(f.read(), **callbacks)
