@@ -1,7 +1,10 @@
 import tkinter as tk
 import time
+import threading
+import weakref
 from tkinter import messagebox
 from .game import Reversi, GameEvent, Player
+from . import ai_player
 
 
 class ReversiApp:
@@ -18,9 +21,10 @@ class ReversiApp:
 
         self._setup_window(tk_root)
         self._tk_root = tk_root
+        self.delay_apply = tk_root.after
         self._run_animation = Animator(
             check_closed=lambda: getattr(self, '_was_closed'),
-            delay_apply=tk_root.after
+            delay_apply=self.delay_apply
         )
 
         def on_close():
@@ -126,12 +130,10 @@ class ReversiApp:
             text='Play', fill='#000'
         )
 
-    def update_game_scores(self):
-        game = self._controller.game
+    def update_game_scores(self, black_cnt, white_cnt):
         cnv = self._scores_canvas
         cnv_width = cnv.winfo_width()
         cnv_height = cnv.winfo_height()
-        white_cnt, black_cnt = game.get_scores()
 
         cnv.create_rectangle(
             0, 0, cnv_width // 2, cnv_height, fill='#000')
@@ -209,7 +211,11 @@ class ReversiApp:
         )
 
     def start_game(self):
-        self._setup_controller(UserVsUserController)
+        self._setup_controller(
+            GameController,
+            black_ai=ai_player.random_ai_player(),
+            white_ai=ai_player.random_ai_player(),
+        )
 
 
 class Animator:
@@ -283,6 +289,47 @@ class Animator:
         self._worker_id = w_id
 
 
+class CallbackJoiner:
+    """
+    Calls real callback when all callbacks previously
+    created by .make_callback() gets called. Reusable.
+
+    >>> def real_callback():
+    ...     print('Hello there')
+    ...
+    >>> joiner = CallbackJoiner(real_callback)
+    >>> cb1 = joiner.make_callback()
+    >>> cb2 = joiner.make_callback()
+    >>> cb3 = joiner.make_callback()
+    >>> cb1()
+    >>> cb2()
+    >>> cb3()
+    Hello there
+    >>> cb1 = joiner.make_callback()
+    >>> cb1()
+    Hello there
+    >>>
+    """
+
+    def __init__(self, real_callback):
+        self._real_callback = real_callback
+        self._counter = 0
+        self._call_ids = weakref.WeakValueDictionary()
+
+    def _callback(self, call_id):
+        self._call_ids.pop(call_id, None)
+        if not self._call_ids:
+            self._real_callback()
+
+    def make_callback(self):
+        # put ID value into closure to mane it constant
+        counter = self._counter
+        self._counter += 1
+        cb = lambda: self._callback(counter)
+        self._call_ids[counter] = cb
+        return cb
+
+
 class MainMenuController:
 
     def __init__(self, app: ReversiApp):
@@ -292,15 +339,11 @@ class MainMenuController:
 
     def on_score_view_click(self):
         self.app.start_game()
-        # messagebox.showerror(
-        #     "Turning you down",
-        #     "Wanna to play? Implement the game before!"
-        # )
 
 
-class UserVsUserController:
+class GameController:
 
-    def __init__(self, app: ReversiApp):
+    def __init__(self, app: ReversiApp, black_ai, white_ai):
         self.app = app
         self.game = Reversi.New(
             on_cant_move=self._on_cant_move,
@@ -308,19 +351,30 @@ class UserVsUserController:
             on_cell_change=self._on_cell_change,
             on_normal_move=self._on_normal_move,
         )
+        self._ai = {
+            Player.Black: black_ai,
+            Player.White: white_ai,
+        }
         self._react_on_click = False
+        self._joiner = CallbackJoiner(self._on_animation_end)
+        self._ai_thread = None
+        self._ai_move = None
+        self._check_ai_done = lambda: self._check_ai_done_impl()
 
     def initialize(self):
         self.app.draw_field_background()
         for (row_id, col_id), cell in self.game.iter_cells():
             if cell is not None:
+                # we run animations
+                # first move will begin when these animations will end
+                # see `_on_animation_end`
                 self.app.show_appear(
                     row_id, col_id, cell,
-                    callback=self._on_animation_end
+                    callback=self._joiner.make_callback()
                 )
+        self.app.update_game_scores(*self.game.get_scores())
         self.app.set_status("{} player's move"
                             .format(self.game.current_player.name))
-        self.app.update_game_scores()
 
     def on_field_click(self, row_id, col_id):
         if not self._react_on_click:
@@ -333,7 +387,12 @@ class UserVsUserController:
         self.game.make_move(row_id, col_id)
 
     def _on_animation_end(self):
-        self._react_on_click = True
+        # animation is the final stage of every move
+        # game's current_player already changed to the next player
+        # so...
+        if self.game.is_game_over:
+            return
+        self._begin_move(self.game.current_player)
 
     def _on_cell_change(self, row_id, col_id, new_player, prev_player):
         if prev_player is None:
@@ -341,24 +400,55 @@ class UserVsUserController:
         else:
             method = self.app.show_change_owner
         self._react_on_click = False
-        method(row_id, col_id, new_player, callback=self._on_animation_end)
+        method(row_id, col_id, new_player,
+               callback=self._joiner.make_callback())
 
     def _on_cant_move(self, player):
-        self.app.update_game_scores()
+        self.app.update_game_scores(*self.game.get_scores())
         self.app.set_status(
             "{} player can not move. {} moves again."
             .format(player.name, player.opposite.name)
         )
 
     def _on_normal_move(self, next_player):
-        self.app.update_game_scores()
+        self.app.update_game_scores(*self.game.get_scores())
         self.app.set_status("{} player's move"
                             .format(next_player.name))
 
     def _on_game_over(self):
+        self._ai_thread = None
         winner = self.game.get_winner()
-        self.app.update_game_scores()
+        self.app.update_game_scores(*self.game.get_scores())
         self.app.set_status("{} player wins!".format(winner.name))
+
+    def _begin_move(self, player):
+        ai = self._ai[player]
+        if ai is None:
+            # enable clicking at game field and wait for user's decision
+            self._react_on_click = True
+        else:
+            # block user actions and run AI in background
+            self._react_on_click = False
+            self._ai_thread = threading.Thread(target=self._ai_worker, args=[ai])
+            self._ai_thread.start()
+            # We should call make_move only in main thread!
+            # This is due to Tkinter's thread-unsafety.
+            # In practice, tk_root.after() may take 20-30 seconds
+            # if called from non-main thread.
+            self.app.delay_apply(5, self._check_ai_done)
+
+    def _ai_worker(self, ai_func):
+        self._ai_move = None
+        time.sleep(0.5)
+        self._ai_move = ai_func(self.game)
+
+    def _check_ai_done_impl(self):
+        if self._ai_thread is None:
+            return
+        if self._ai_thread.is_alive():
+            self.app.delay_apply(5, self._check_ai_done)
+            return
+        self.game.make_move(*self._ai_move)
 
 
 def main():

@@ -95,7 +95,7 @@ class Reversi(object):
                 white_cnt += 1
             elif cell == Player.Black:
                 black_cnt += 1
-        return white_cnt, black_cnt
+        return black_cnt, white_cnt
 
     def __getitem__(self, pos):
         row_id, col_id = pos
