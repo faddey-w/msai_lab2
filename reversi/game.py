@@ -1,4 +1,5 @@
 import enum
+import copy
 from itertools import product
 
 
@@ -7,7 +8,7 @@ class Player(str, enum.Enum):
     White = 'w'
 
     @property
-    def opposite(self):
+    def opponent(self):
         if self == self.Black:
             return self.White
         else:
@@ -26,7 +27,7 @@ class Reversi(object):
     FIELD_SIZE = 8
 
     def __init__(self, player, field, **callbacks):
-        self._player = Player(player)
+        self._player = player = Player(player)
         self.callbacks = {
             GameEvent(key): val
             for key, val in callbacks.items()
@@ -43,8 +44,8 @@ class Reversi(object):
         assert all(len(row) == self.FIELD_SIZE for row in field)
 
         self._field = field
-        self._possible_moves = None
-        self._calculate_possible_moves()
+        self._possible_moves = self._calculate_possible_moves(player)
+        self._opponent_moves = self._calculate_possible_moves(player.opponent)
 
     @classmethod
     def New(cls, **callbacks):
@@ -106,7 +107,7 @@ class Reversi(object):
             raise IndexError
         return self._field[row_id][col_id]
 
-    def _get(self, position):
+    def get(self, position):
         row_id, col_id = position
         try:
             return self[row_id, col_id]
@@ -124,7 +125,7 @@ class Reversi(object):
 
     def _set(self, position, player):
         row_id, col_id = position
-        prev_player = self._get(position)
+        prev_player = self.get(position)
         self._field[row_id][col_id] = player
         self._send_event(GameEvent.CellOwnerChange,
                          row_id, col_id, player, prev_player)
@@ -147,12 +148,12 @@ class Reversi(object):
                 while True:
                     step += 1
                     tested_pos = _pos_add(pos, inc, step)
-                    cell_state = self._get(tested_pos)
+                    cell_state = self.get(tested_pos)
                     if cell_state is None:
                         # we go out from the game field or this cell is empty
                         cells_to_revert.clear()
                         break
-                    elif cell_state == player.opposite:
+                    elif cell_state == player.opponent:
                         # we may revert this cell
                         cells_to_revert.append(tested_pos)
                     else:
@@ -163,11 +164,14 @@ class Reversi(object):
             if total_cells_to_revert:
                 result[pos] = total_cells_to_revert
 
-        self._possible_moves = result
         return result
 
-    def get_possible_moves(self):
-        return set(self._possible_moves.keys())
+    def get_possible_moves(self, player=None):
+        player = player or self.current_player
+        if player == self.current_player:
+            return set(self._possible_moves.keys())
+        else:
+            return set(self._opponent_moves.keys())
 
     def make_move(self, row_id, col_id):
         move_position = row_id, col_id
@@ -177,13 +181,20 @@ class Reversi(object):
         for position in self._possible_moves[move_position]:
             self._set(position, self._player)
 
-        if self._calculate_possible_moves(self._player.opposite):
-            self._player = self._player.opposite
+        moves = self._calculate_possible_moves(self._player.opponent)
+        opponent_moves = self._calculate_possible_moves(self._player)
+        if moves:
+            self._possible_moves = moves
+            self._opponent_moves = opponent_moves
+            self._player = self._player.opponent
             self._send_event(GameEvent.NormalMove, self._player)
-        elif self._calculate_possible_moves(self._player):
+        elif opponent_moves:
+            self._possible_moves = opponent_moves
+            self._opponent_moves = moves
             self._send_event(GameEvent.PlayerCannotMove,
-                             self._player.opposite)
+                             self._player.opponent)
         else:
+            self._possible_moves = self._opponent_moves = {}
             self._send_event(GameEvent.GameOver)
 
     def dump(self):
@@ -194,6 +205,21 @@ class Reversi(object):
                 for row in self._field
             ]
         }
+
+    def copy(self, with_callbacks=False):
+        # in other programming language I'd rather use a private constructor.
+        # But now I want to preserve constructor semantics, and to create
+        # new instance without calling the constructor code.
+        # This tricky code uses __class__ assignment: after that assignment
+        # object de-facto changes its type, and then I simply fill the __dict__
+        rev = _copy_helper()
+        rev.__class__ = self.__class__
+        rev._player = self._player
+        rev._field = copy.deepcopy(self._field)
+        rev.callbacks = self.callbacks.copy() if with_callbacks else {}
+        rev._possible_moves = self._possible_moves
+        rev._opponent_moves = self._opponent_moves
+        return rev
 
     def __str__(self):
         h_border = '{0}{1}{0}'.format(
@@ -220,3 +246,7 @@ class InvalidMove(Exception):
 def load_from_text_file(filename, **callbacks):
     with open(filename) as f:
         return Reversi.LoadFromText(f.read(), **callbacks)
+
+
+class _copy_helper:
+    pass

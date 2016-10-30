@@ -213,8 +213,18 @@ class ReversiApp:
     def start_game(self):
         self._setup_controller(
             GameController,
-            black_ai=ai_player.random_ai_player(),
-            white_ai=ai_player.random_ai_player(),
+            black_ai=ai_player.material_advantage_ai(
+                Player.Black,
+                max_depth=1.5,
+                weight_ratio=1,
+            ),
+            white_ai=ai_player.positional_advantage_ai(
+                Player.White,
+                max_depth=ai_player.max_depth_decision(1.5, 5),
+                corner_weight=5,
+                side_weigth=1.5,
+                insider_ratio=0
+            ),
         )
 
 
@@ -407,7 +417,7 @@ class GameController:
         self.app.update_game_scores(*self.game.get_scores())
         self.app.set_status(
             "{} player can not move. {} moves again."
-            .format(player.name, player.opposite.name)
+            .format(player.name, player.opponent.name)
         )
 
     def _on_normal_move(self, next_player):
@@ -417,6 +427,7 @@ class GameController:
 
     def _on_game_over(self):
         self._ai_thread = None
+        self._react_on_click = True
         winner = self.game.get_winner()
         self.app.update_game_scores(*self.game.get_scores())
         self.app.set_status("{} player wins!".format(winner.name))
