@@ -2,7 +2,7 @@
 task-description
 *.log
 .idea
-dist
+
 build
 
 # Mac OS Finder's files
