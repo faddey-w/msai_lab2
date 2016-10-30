@@ -54,8 +54,8 @@ class Reversi(object):
             for _ in range(cls.FIELD_SIZE)
         ]
         middle = cls.FIELD_SIZE // 2 - 1
-        field[middle][middle] = field[middle+1][middle+1] = Player.Black
-        field[middle+1][middle] = field[middle][middle+1] = Player.White
+        field[middle+1][middle] = field[middle][middle+1] = Player.Black
+        field[middle][middle] = field[middle+1][middle+1] = Player.White
         return cls(Player.Black, field, **callbacks)
 
     @classmethod

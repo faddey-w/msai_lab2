@@ -10,7 +10,7 @@ def max_depth_decision(middle, end):
     def choose_max_depth(game, player):
         num_empty = sum(1 for _, cell in game.iter_cells() if cell is None)
         if num_empty > (NUM_CELLS - 10):
-            return 1
+            return 2
         elif num_empty < (NUM_CELLS / 5):
             return end
         else:

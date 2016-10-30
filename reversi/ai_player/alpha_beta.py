@@ -7,11 +7,6 @@ def alpha_beta_ai(player, max_depth, estimate_utility, utility,
         max_depth = None
     else:
         get_max_depth = None
-        # HOF accepts max depth in moves units, that is
-        # in pairs of "our move, opponents move"
-        # but internal algorithms use half-move units
-        # so we double the max depth value
-        max_depth *= 2
 
     def alpha_beta_decide(game):
         if get_max_depth:
