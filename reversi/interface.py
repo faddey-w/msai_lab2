@@ -222,7 +222,7 @@ class ReversiApp:
                 Player.White,
                 max_depth=ai_player.max_depth_decision(1.5, 5),
                 corner_weight=5,
-                side_weigth=1.5,
+                side_weight=1.5,
                 insider_ratio=0
             ),
         )
