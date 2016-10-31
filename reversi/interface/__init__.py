@@ -1,4 +1,4 @@
-import tkinter as tk
+from .dependencies import tk
 from .app import ReversiApp
 
 

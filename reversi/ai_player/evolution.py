@@ -1,11 +1,10 @@
 import random
 import time
-import multiprocessing
 import itertools
 from ..game import Reversi, Player
 
 
-class Score:
+class Score(object):
 
     def __init__(self, win_ratio, avg_time, time_dev):
         self.win_ratio = win_ratio
@@ -28,7 +27,7 @@ class Score:
         )
 
 
-class BasicIndividual:
+class BasicIndividual(object):
 
     Attrs = ()
     TypeName = ''
@@ -107,7 +106,7 @@ class VariableDepthIndividual(BasicIndividual):
         return result
 
 
-class CombinedIndividual:
+class CombinedIndividual(object):
 
     def __init__(self, ind1, ind2):
         self.ind1 = ind1

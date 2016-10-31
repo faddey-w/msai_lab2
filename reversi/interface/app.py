@@ -1,12 +1,11 @@
-import tkinter as tk
+from .dependencies import tk
 from ..game import Reversi, Player
-from .. import ai_player
 from .utils import Animator
 from .main_menu_ctl import MainMenuController
 from .game_ctl import GameController
 
 
-class ReversiApp:
+class ReversiApp(object):
 
     # common parameters
     CELL_SIZE = 50
@@ -15,7 +14,7 @@ class ReversiApp:
     TOP_PANEL_HEIGHT = CELL_SIZE
     BACKGROUND = '#532'
 
-    def __init__(self, tk_root: tk.Tk):
+    def __init__(self, tk_root):
         self._controller = None
 
         self._setup_window(tk_root)

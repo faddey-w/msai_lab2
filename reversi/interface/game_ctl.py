@@ -4,7 +4,7 @@ from ..game import Reversi, Player
 from .utils import CallbackJoiner
 
 
-class GameController:
+class GameController(object):
 
     def __init__(self, app, black_ai, white_ai):
         self.app = app

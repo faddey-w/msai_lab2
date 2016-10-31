@@ -4,21 +4,21 @@ def alpha_beta_ai(player, max_depth, estimate_utility, utility,
                   order_moves_traverse=None):
     if callable(max_depth):
         get_max_depth = max_depth
-        max_depth = None
     else:
         get_max_depth = None
 
     def alpha_beta_decide(game):
         if get_max_depth:
-            nonlocal max_depth
-            max_depth = get_max_depth(game, player)
-        _, move = max_value(game, 0, float('-Inf'), float('Inf'))
+            max_depth_ = get_max_depth(game, player)
+        else:
+            max_depth_ = max_depth
+        _, move = max_value(game, 0, float('-Inf'), float('Inf'), max_depth_)
         return move
 
-    def max_value(game, depth, alpha, beta):
+    def max_value(game, depth, alpha, beta, max_depth_):
         if game.is_game_over:
             return utility(game, player), None
-        if depth >= max_depth:
+        if depth >= max_depth_:
             return estimate_utility(game, player), None
         best_value, best_move = float('-Inf'), None
         possible_moves = game.get_possible_moves()
@@ -34,7 +34,7 @@ def alpha_beta_ai(player, max_depth, estimate_utility, utility,
                 func = max_value
             else:
                 func = min_value
-            value, _ = func(next_game, depth+1, alpha, beta)
+            value, _ = func(next_game, depth+1, alpha, beta, max_depth_)
             if value > best_value:
                 best_value = value
                 best_move = move
@@ -43,10 +43,10 @@ def alpha_beta_ai(player, max_depth, estimate_utility, utility,
             alpha = max(alpha, best_value)
         return best_value, best_move
 
-    def min_value(game, depth, alpha, beta):
+    def min_value(game, depth, alpha, beta, max_depth_):
         if game.is_game_over:
             return utility(game, player), None
-        if depth >= max_depth:
+        if depth >= max_depth_:
             return estimate_utility(game, player), None
         worst_value, worst_move = float('Inf'), None
         for move in game.get_possible_moves():
@@ -57,7 +57,7 @@ def alpha_beta_ai(player, max_depth, estimate_utility, utility,
                 func = min_value
             else:
                 func = max_value
-            value, _ = func(next_game, depth+1, alpha, beta)
+            value, _ = func(next_game, depth+1, alpha, beta, max_depth_)
             if value < worst_value:
                 worst_value = value
                 worst_move = move

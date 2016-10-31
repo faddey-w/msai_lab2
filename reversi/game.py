@@ -1,4 +1,4 @@
-import enum
+from .interface.dependencies import enum
 import copy
 from itertools import product
 
@@ -151,7 +151,7 @@ class Reversi(object):
                     cell_state = self.get(tested_pos)
                     if cell_state is None:
                         # we go out from the game field or this cell is empty
-                        cells_to_revert.clear()
+                        cells_to_revert[:] = []
                         break
                     elif cell_state == player.opponent:
                         # we may revert this cell
@@ -248,5 +248,5 @@ def load_from_text_file(filename, **callbacks):
         return Reversi.LoadFromText(f.read(), **callbacks)
 
 
-class _copy_helper:
+class _copy_helper(object):
     pass

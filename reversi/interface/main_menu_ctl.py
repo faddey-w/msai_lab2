@@ -1,11 +1,9 @@
-import enum
-import tkinter as tk
-from tkinter import simpledialog, messagebox
+from .dependencies import tk, simpledialog, enum
 from .. import ai_player
 from ..game import Player
 
 
-class MainMenuController:
+class MainMenuController(object):
 
     def __init__(self, app):
         self.app = app
@@ -26,7 +24,7 @@ class PlayerSetupDialog(simpledialog.Dialog):
     def __init__(self, app_window):
         self.black_ai, self.white_ai, self.is_ok = None, None, False
         self.black_form, self.white_form = None, None
-        super(PlayerSetupDialog, self).__init__(app_window, 'Game Setup')
+        simpledialog.Dialog.__init__(self, app_window, 'Game Setup')
 
     def body(self, frame):
         self.geometry('350x450')
@@ -78,7 +76,7 @@ class AIType(str, enum.Enum):
     PositionAdv = 'Position advantage AI'
 
 
-class PlayerForm:
+class PlayerForm(object):
 
     def __init__(self, frame):
         pass
@@ -87,7 +85,7 @@ class PlayerForm:
         return None
 
 
-class DepthSelectForm:
+class DepthSelectForm(object):
 
     def __init__(self, frame, **defaults):
         self._use_variable_depth = tk.BooleanVar(
@@ -148,7 +146,7 @@ class DepthSelectForm:
 class MaterialAdvForm(DepthSelectForm):
 
     def __init__(self, frame, **defaults):
-        super().__init__(frame, **defaults)
+        super(MaterialAdvForm, self).__init__(frame, **defaults)
         self._weight_ratio = tk.StringVar(
             frame, defaults.get('weight_ratio', 1))
         tk.Label(frame, text='Weight ratio:').grid(row=4, column=1)
@@ -165,7 +163,7 @@ class MaterialAdvForm(DepthSelectForm):
 class PositionalAdvForm(DepthSelectForm):
 
     def __init__(self, frame, **defaults):
-        super().__init__(frame, **defaults)
+        super(PositionalAdvForm, self).__init__(frame, **defaults)
         self._corner_weight = tk.StringVar(
             frame, defaults.get('corner_weight', 4))
         self._side_weight = tk.StringVar(

@@ -2,7 +2,7 @@ import time
 import weakref
 
 
-class Animator:
+class Animator(object):
 
     FRAMES_PER_SECOND = 15
 
@@ -31,7 +31,7 @@ class Animator:
         # from within callbacks or step functions
         remove_indices = set()
         entry_dict = dict(enumerate(self._entries))
-        self._entries.clear()
+        self._entries[:] = []
 
         # perform all animation steps within single event of event-loop
         # that's why this class was created:
@@ -73,7 +73,7 @@ class Animator:
         self._worker_id = w_id
 
 
-class CallbackJoiner:
+class CallbackJoiner(object):
     """
     Calls real callback when all callbacks previously
     created by .make_callback() gets called. Reusable.
