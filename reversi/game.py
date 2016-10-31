@@ -1,4 +1,4 @@
-from .interface.dependencies import enum
+from .dependencies import enum
 import copy
 from itertools import product
 

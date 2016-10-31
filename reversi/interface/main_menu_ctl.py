@@ -1,4 +1,4 @@
-from .dependencies import tk, simpledialog, enum
+from ..dependencies import tk, simpledialog, enum
 from .. import ai_player
 from ..game import Player
 

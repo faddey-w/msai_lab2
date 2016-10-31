@@ -1,4 +1,4 @@
-from .dependencies import tk
+from ..dependencies import tk
 from .app import ReversiApp
 
 

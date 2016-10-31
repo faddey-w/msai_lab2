@@ -109,7 +109,8 @@ class GameController(object):
     def _ai_worker(self, ai_func):
         self._ai_move = None
         time.sleep(0.5)
-        self._ai_move = ai_func(self.game)
+        plan = ai_func(self.game)
+        self._ai_move = plan[0]
 
     def _check_ai_done_impl(self):
         if self._ai_thread is None:

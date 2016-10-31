@@ -1,4 +1,4 @@
-from .dependencies import tk
+from ..dependencies import tk
 from ..game import Reversi, Player
 from .utils import Animator
 from .main_menu_ctl import MainMenuController
