@@ -136,11 +136,11 @@ class DepthSelectForm(object):
     def get_depth(self):
         if self._use_variable_depth.get():
             return ai_player.max_depth_decision(
-                middle=int(self._midgame_depth.get()),
-                end=int(self._endgame_depth.get()),
+                middle=int(self._midgame_depth.get() or 0),
+                end=int(self._endgame_depth.get() or 0),
             )
         else:
-            return int(self._const_depth.get())
+            return int(self._const_depth.get() or 0)
 
 
 class MaterialAdvForm(DepthSelectForm):
@@ -156,7 +156,7 @@ class MaterialAdvForm(DepthSelectForm):
         return ai_player.material_advantage_ai(
             player=player,
             max_depth=self.get_depth(),
-            weight_ratio=float(self._weight_ratio.get())
+            weight_ratio=float(self._weight_ratio.get() or 0)
         )
 
 
@@ -182,9 +182,9 @@ class PositionalAdvForm(DepthSelectForm):
         return ai_player.positional_advantage_ai(
             player=player,
             max_depth=self.get_depth(),
-            corner_weight=float(self._corner_weight.get()),
-            side_weight=float(self._side_weight.get()),
-            insider_ratio=float(self._insider_ratio.get()),
+            corner_weight=float(self._corner_weight.get() or 0),
+            side_weight=float(self._side_weight.get() or 0),
+            insider_ratio=float(self._insider_ratio.get() or 0),
         )
 
 
@@ -197,6 +197,8 @@ FORM_MAP = {
 
 def _validator(to_type):
     def validate(new_value):
+        if not new_value:
+            return True
         try:
             to_type(new_value)
             return True

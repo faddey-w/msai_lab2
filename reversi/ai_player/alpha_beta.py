@@ -25,8 +25,6 @@ def alpha_beta_ai(player, max_depth, estimate_utility, utility,
         possible_moves = game.get_possible_moves()
         if order_moves_traverse:
             possible_moves = order_moves_traverse(game, possible_moves, player)
-        if depth == 0 and len(possible_moves) == 1:
-            return None, list(possible_moves)[0]
         for move in possible_moves:
             next_game = game.copy()
             next_game.make_move(*move)
@@ -46,11 +44,14 @@ def alpha_beta_ai(player, max_depth, estimate_utility, utility,
 
     def min_value(game, depth, alpha, beta, max_depth_):
         if game.is_game_over:
-            return utility(game, player), None
+            return utility(game, player), []
         if depth >= max_depth_:
-            return estimate_utility(game, player), None
+            return estimate_utility(game, player), []
         worst_value, worst_plan = float('Inf'), None
-        for move in game.get_possible_moves():
+        possible_moves = game.get_possible_moves()
+        if order_moves_traverse:
+            possible_moves = order_moves_traverse(game, possible_moves, player)
+        for move in possible_moves:
             next_game = game.copy()
             next_game.make_move(*move)
             if next_game.current_player == game.current_player:
