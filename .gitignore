@@ -12,3 +12,4 @@ build
 setup.py
 
 play.py
+!trace.log
